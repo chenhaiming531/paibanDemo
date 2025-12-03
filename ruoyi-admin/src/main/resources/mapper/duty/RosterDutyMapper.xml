@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.duty.mapper.RosterDutyMapper">
+
+    <resultMap type="RosterDuty" id="RosterDutyResult">
+        <result property="id" column="id" />
+        <result property="dutyStaffId" column="duty_staff_id" />
+        <result property="dutyTime" column="duty_time" />
+        <result property="createBy" column="create_by" />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy" column="update_by" />
+        <result property="updateTime" column="update_time" />
+
+        <!-- 添加关联映射 -->
+        <association property="staff" javaType="RosterStaff">
+            <result property="id" column="staff_id" />
+            <result property="staffName" column="staff_name" />
+            <result property="staffTypeId" column="staff_type_id" />
+            <result property="staffLeave" column="staff_leave" />
+            <result property="staffSort" column="staff_sort" />
+            <result property="staffLeaveEndTime" column="staff_leave_end_time" />
+            <result property="staffGender" column="staff_gender" />
+            <result property="department" column="department" />
+            <result property="unit" column="unit" />
+            <result property="jobTitle" column="job_title" />
+            <result property="hospitalTime" column="hospital_time" />
+            <result property="beginHospitalTime" column="begin_hospital_time" />
+            <result property="endHospitalTime" column="end_hospital_time" />
+            <result property="status" column="status" />
+        </association>
+    </resultMap>
+
+    <sql id="selectRosterDutyVo">
+        select
+            rd.id,
+            rd.duty_staff_id,
+            rd.duty_time,
+            rd.create_by,
+            rd.create_time,
+            rd.update_by,
+            rd.update_time,
+            rs.id as staff_id,
+            rs.staff_name,
+            rs.staff_type_id,
+            rs.staff_leave,
+            rs.staff_sort,
+            rs.staff_leave_end_time,
+            rs.staff_gender,
+            rs.department,
+            rs.unit,
+            rs.job_title,
+            rs.hospital_time,
+            rs.begin_hospital_time,
+            rs.end_hospital_time,
+            rs.status
+        from roster_duty rd
+                 left join roster_staff rs on rd.duty_staff_id = rs.id
+    </sql>
+
+    <select id="selectRosterDutyList" parameterType="RosterDuty" resultMap="RosterDutyResult">
+        <include refid="selectRosterDutyVo"/>
+        <where>
+            <if test="dutyStaffId != null "> and rd.duty_staff_id = #{dutyStaffId}</if>
+            <if test="dutyTime != null "> and rd.duty_time = #{dutyTime}</if>
+        </where>
+    </select>
+
+    <select id="selectRosterDutyById" parameterType="Long" resultMap="RosterDutyResult">
+        <include refid="selectRosterDutyVo"/>
+        where rd.id = #{id}
+    </select>
+
+    <insert id="insertRosterDuty" parameterType="RosterDuty" useGeneratedKeys="true" keyProperty="id">
+        insert into roster_duty
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="dutyStaffId != null">duty_staff_id,</if>
+            <if test="dutyTime != null">duty_time,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="dutyStaffId != null">#{dutyStaffId},</if>
+            <if test="dutyTime != null">#{dutyTime},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateRosterDuty" parameterType="RosterDuty">
+        update roster_duty
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="dutyStaffId != null">duty_staff_id = #{dutyStaffId},</if>
+            <if test="dutyTime != null">duty_time = #{dutyTime},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteRosterDutyById" parameterType="Long">
+        delete from roster_duty where id = #{id}
+    </delete>
+
+    <delete id="deleteRosterDutyByIds" parameterType="String">
+        delete from roster_duty where id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

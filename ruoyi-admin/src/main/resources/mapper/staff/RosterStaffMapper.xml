@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.staff.mapper.RosterStaffMapper">
+
+    <resultMap type="RosterStaff" id="RosterStaffResult">
+        <result property="id"    column="id"    />
+        <result property="staffName"    column="staff_name"    />
+        <result property="staffTypeId"    column="staff_type_id"    />
+        <result property="staffLeave"    column="staff_leave"    />
+        <result property="staffSort"    column="staff_sort"    />
+        <result property="staffPriority"    column="staff_priority"    />
+        <result property="staffDutySort"    column="staff_duty_sort"    />
+        <result property="staffLeaveEndTime"    column="staff_leave_end_time"    />
+        <result property="staffGender"    column="staff_gender"    />
+        <result property="department"    column="department"    />
+        <result property="unit"    column="unit"    />
+        <result property="jobTitle"    column="job_title"    />
+        <result property="hospitalTime"    column="hospital_time"    />
+        <result property="beginHospitalTime"    column="begin_hospital_time"    />
+        <result property="endHospitalTime"    column="end_hospital_time"    />
+        <result property="status"    column="status"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectRosterStaffVo">
+        select id, staff_name, staff_type_id, staff_leave,staff_sort, staff_duty_sort,staff_priority, staff_leave_end_time,staff_gender, department, unit, job_title,
+               hospital_time, begin_hospital_time, end_hospital_time,
+               status, create_by, create_time, update_by, update_time
+        from roster_staff
+    </sql>
+
+    <select id="selectRosterStaffList" parameterType="RosterStaff" resultMap="RosterStaffResult">
+        <include refid="selectRosterStaffVo"/>
+        <where>
+            <if test="staffName != null  and staffName != ''"> and staff_name like concat('%', #{staffName}, '%')</if>
+            <if test="staffTypeId != null "> and staff_type_id = #{staffTypeId}</if>
+             <if test="staffLeave != null  and staffLeave != ''"> and staff_leave = #{staffLeave}</if>
+            <if test="staffLeaveEndTime != null">
+                and staff_leave_end_time = #{staffLeaveEndTime}
+            </if>
+            <if test="staffGender != null  and staffGender != ''"> and staff_gender = #{staffGender}</if>
+            <if test="department != null  and department != ''"> and department = #{department}</if>
+            <if test="unit != null  and unit != ''"> and unit = #{unit}</if>
+            <if test="jobTitle != null  and jobTitle != ''"> and job_title = #{jobTitle}</if>
+            <if test="hospitalTime != null "> and hospital_time = #{hospitalTime}</if>
+            <if test="beginHospitalTime != null  and beginHospitalTime != ''"> and begin_hospital_time = #{beginHospitalTime}</if>
+            <if test="endHospitalTime != null  and endHospitalTime != ''"> and end_hospital_time = #{endHospitalTime}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+        </where>
+    </select>
+
+    <select id="selectRosterStaffList2" parameterType="RosterStaff" resultMap="RosterStaffResult">
+        <include refid="selectRosterStaffVo"/>
+        <where>
+            <if test="staffName != null  and staffName != ''"> and staff_name like concat('%', #{staffName}, '%')</if>
+            <if test="staffTypeId != null "> and staff_type_id = #{staffTypeId}</if>
+            <if test="staffLeave != null  and staffLeave != ''"> and staff_leave = #{staffLeave}</if>
+            <if test="staffLeaveEndTime != null">
+                and staff_leave_end_time = #{staffLeaveEndTime}
+            </if>
+            <if test="staffLeaveEndTime == null">
+                and staff_leave_end_time is null
+            </if>
+            <if test="staffGender != null  and staffGender != ''"> and staff_gender = #{staffGender}</if>
+            <if test="department != null  and department != ''"> and department = #{department}</if>
+            <if test="unit != null  and unit != ''"> and unit = #{unit}</if>
+            <if test="jobTitle != null  and jobTitle != ''"> and job_title = #{jobTitle}</if>
+            <if test="hospitalTime != null "> and hospital_time = #{hospitalTime}</if>
+            <if test="beginHospitalTime != null  and beginHospitalTime != ''"> and begin_hospital_time = #{beginHospitalTime}</if>
+            <if test="endHospitalTime != null  and endHospitalTime != ''"> and end_hospital_time = #{endHospitalTime}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+        </where>
+    </select>
+
+    <select id="selectRosterStaffById" parameterType="Long" resultMap="RosterStaffResult">
+        <include refid="selectRosterStaffVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertRosterStaff" parameterType="RosterStaff" useGeneratedKeys="true" keyProperty="id">
+        insert into roster_staff
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="staffName != null and staffName != ''">staff_name,</if>
+            <if test="staffTypeId != null">staff_type_id,</if>
+            <if test="staffLeave != null">staff_leave,</if>
+            <if test="staffSort != null">staff_sort,</if>
+            <if test="staffDutySort != null">staff_duty_sort,</if>
+            <if test="staffPriority != null">staff_priority,</if>
+            <if test="staffLeaveEndTime != null">staff_leave_end_time,</if>
+            <if test="staffGender != null">staff_gender,</if>
+            <if test="department != null">department,</if>
+            <if test="unit != null">unit,</if>
+            <if test="jobTitle != null">job_title,</if>
+            <if test="hospitalTime != null">hospital_time,</if>
+            <if test="beginHospitalTime != null">begin_hospital_time,</if>
+            <if test="endHospitalTime != null">end_hospital_time,</if>
+            <if test="status != null">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="staffName != null and staffName != ''">#{staffName},</if>
+            <if test="staffTypeId != null">#{staffTypeId},</if>
+            <if test="staffLeave != null">#{staffLeave},</if>
+            <if test="staffSort != null">#{staffSort},</if>
+            <if test="staffDutySort != null">#{staffDutySort},</if>
+            <if test="staffPriority != null">#{staffPriority},</if>
+            <if test="staffLeaveEndTime != null">#{staffLeaveEndTime},</if>
+            <if test="staffGender != null">#{staffGender},</if>
+            <if test="department != null">#{department},</if>
+            <if test="unit != null">#{unit},</if>
+            <if test="jobTitle != null">#{jobTitle},</if>
+            <if test="hospitalTime != null">#{hospitalTime},</if>
+            <if test="beginHospitalTime != null">#{beginHospitalTime},</if>
+            <if test="endHospitalTime != null">#{endHospitalTime},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateRosterStaff" parameterType="RosterStaff">
+        update roster_staff
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="staffName != null and staffName != ''">staff_name = #{staffName},</if>
+            <if test="staffTypeId != null">staff_type_id = #{staffTypeId},</if>
+            <if test="staffLeave != null">staff_leave = #{staffLeave},</if>
+            <if test="staffSort != null">staff_sort = #{staffSort},</if>
+            <if test="staffDutySort != null">staff_duty_sort = #{staffDutySort},</if>
+            <if test="staffPriority != null">staff_priority = #{staffPriority},</if>
+            <if test="staffLeaveEndTime != null">staff_leave_end_time = #{staffLeaveEndTime},</if>
+            <if test="staffGender != null">staff_gender = #{staffGender},</if>
+            <if test="department != null">department = #{department},</if>
+            <if test="unit != null">unit = #{unit},</if>
+            <if test="jobTitle != null">job_title = #{jobTitle},</if>
+            <if test="hospitalTime != null">hospital_time = #{hospitalTime},</if>
+            <if test="beginHospitalTime != null">begin_hospital_time = #{beginHospitalTime},</if>
+            <if test="endHospitalTime != null">end_hospital_time = #{endHospitalTime},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteRosterStaffById" parameterType="Long">
+        delete from roster_staff where id = #{id}
+    </delete>
+
+    <delete id="deleteRosterStaffByIds" parameterType="String">
+        delete from roster_staff where id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <!-- 批量更新请假状态 - 推荐使用这种方式 -->
+    <update id="batchUpdateStaffLeave" parameterType="java.util.List">
+        update roster_staff
+        <set>
+            <!-- 处理staff_leave字段 -->
+            <trim prefix="staff_leave = case" suffix="end,">
+                <foreach collection="list" item="item">
+                    when id = #{item.id} then #{item.staffLeave}
+                </foreach>
+            </trim>
+
+            <!-- 处理staff_leave_end_time字段 -->
+            <trim prefix="staff_leave_end_time = case" suffix="end,">
+                <foreach collection="list" item="item">
+                    when id = #{item.id} then #{item.staffLeaveEndTime}
+                </foreach>
+            </trim>
+
+            <!-- 更新时间 -->
+            update_time = sysdate()
+        </set>
+
+        <!-- 仅更新列表中包含的ID -->
+        where id in
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            #{item.id}
+        </foreach>
+    </update>
+
+
+    <!-- 批量取消标签 -->
+    <update id="updateExpiredLeaveRecords" parameterType="java.util.List">
+        update roster_staff
+        <set>
+            <!-- 处理staff_leave字段 -->
+            <trim prefix="staff_leave = case" suffix="end,">
+                <foreach collection="list" item="item">
+                    when id = #{item.id} then null
+                </foreach>
+            </trim>
+
+            <!-- 处理staff_leave_end_time字段 -->
+            <trim prefix="staff_leave_end_time = case" suffix="end,">
+                <foreach collection="list" item="item">
+                    when id = #{item.id} then null
+                </foreach>
+            </trim>
+
+            <!-- 更新时间 -->
+            update_time = sysdate()
+        </set>
+
+        <!-- 仅更新列表中包含的ID -->
+        where id in
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            #{item.id}
+        </foreach>
+    </update>
+
+    <!-- 统计指定年月是否有请假记录 -->
+    <select id="countStaffLeaveByMonth" resultType="int">
+        SELECT
+            CASE
+                WHEN COUNT(*) > 0 THEN 1
+                ELSE 0
+                END as has_record
+        FROM roster_staff
+        WHERE staff_leave IS NOT NULL
+            AND staff_leave_end_time IS NOT NULL
+            AND YEAR(staff_leave_end_time) = #{year}
+          AND MONTH(staff_leave_end_time) = #{month}
+--           AND status = '0'  -- 可选：只统计有效状态的记录
+    </select>
+
+    <!-- 在原有内容基础上添加 -->
+    <update id="batchExpireLeaveRecords" parameterType="java.util.Date">
+        UPDATE roster_staff
+        SET staff_leave = NULL,
+            staff_leave_end_time = NULL,
+            update_time = sysdate()
+        WHERE
+            -- 匹配日期部分（忽略时分秒）
+            DATE(staff_leave_end_time) = DATE(#{yesterday})
+          AND staff_leave IS NOT NULL  -- 确保只更新有请假状态的记录
+    </update>
+
+    <!-- 将staff_leave等于3的记录的相关字段置空（支持多条数据） -->
+    <update id="clearByStaffLeaveEquals3">
+        UPDATE roster_staff
+        SET staff_leave = NULL,
+            staff_leave_end_time = NULL,
+            update_time = sysdate()
+        WHERE
+            staff_leave = 3
+          AND (staff_leave IS NOT NULL OR staff_leave_end_time IS NOT NULL)
+    </update>
+
+</mapper>

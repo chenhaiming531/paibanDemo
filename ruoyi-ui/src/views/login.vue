@@ -56,7 +56,7 @@
     </el-form>
     <!--  底部  -->
     <div class="el-login-footer">
-      <span>Copyright © 2018-2025 ruoyi.vip All Rights Reserved.</span>
+      <span></span>
     </div>
   </div>
 </template>
@@ -73,8 +73,8 @@ export default {
       title: process.env.VUE_APP_TITLE,
       codeUrl: "",
       loginForm: {
-        username: "admin",
-        password: "admin123",
+        username: "",
+        password: "",
         rememberMe: false,
         code: "",
         uuid: ""
@@ -112,6 +112,8 @@ export default {
     getCode() {
       getCodeImg().then(res => {
         this.captchaEnabled = res.captchaEnabled === undefined ? true : res.captchaEnabled
+        //关掉验证码
+         this.captchaEnabled = false
         if (this.captchaEnabled) {
           this.codeUrl = "data:image/gif;base64," + res.img
           this.loginForm.uuid = res.uuid

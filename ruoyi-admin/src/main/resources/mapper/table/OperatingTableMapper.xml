@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.table.mapper.OperatingTableMapper">
+
+    <resultMap type="OperatingTable" id="OperatingTableResult">
+        <result property="id"    column="id"    />
+        <result property="operationName"    column="operation_name"    />
+        <result property="relationId"    column="relation_id"    />
+        <result property="difficulty"    column="difficulty"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectOperatingTableVo">
+        select id, operation_name, relation_id, difficulty, create_by, create_time, update_by, update_time from operating_table
+    </sql>
+
+    <!-- 根据关联ID查询所有手术台（支持返回多条） -->
+    <select id="selectOperatingTableListByDetailId" parameterType="Long" resultMap="OperatingTableResult">
+        <include refid="selectOperatingTableVo"/>
+        where relation_id = #{relationId}
+    </select>
+
+    <select id="selectOperatingTableList" parameterType="OperatingTable" resultMap="OperatingTableResult">
+        <include refid="selectOperatingTableVo"/>
+        <where>
+            <if test="operationName != null  and operationName != ''"> and operation_name like concat('%', #{operationName}, '%')</if>
+            <if test="relationId != null "> and relation_id = #{relationId}</if>
+            <if test="difficulty != null  and difficulty != ''"> and difficulty = #{difficulty}</if>
+        </where>
+    </select>
+
+    <select id="selectOperatingTableById" parameterType="Long" resultMap="OperatingTableResult">
+        <include refid="selectOperatingTableVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertOperatingTable" parameterType="OperatingTable">
+        insert into operating_table
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null">id,</if>
+            <if test="operationName != null and operationName != ''">operation_name,</if>
+            <if test="relationId != null">relation_id,</if>
+            <if test="difficulty != null and difficulty != ''">difficulty,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null">#{id},</if>
+            <if test="operationName != null and operationName != ''">#{operationName},</if>
+            <if test="relationId != null">#{relationId},</if>
+            <if test="difficulty != null and difficulty != ''">#{difficulty},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateOperatingTable" parameterType="OperatingTable">
+        update operating_table
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="operationName != null and operationName != ''">operation_name = #{operationName},</if>
+            <if test="relationId != null">relation_id = #{relationId},</if>
+            <if test="difficulty != null and difficulty != ''">difficulty = #{difficulty},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteOperatingTableById" parameterType="Long">
+        delete from operating_table where id = #{id}
+    </delete>
+
+    <delete id="deleteOperatingTableByIds" parameterType="String">
+        delete from operating_table where id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.detail.mapper.RosterScheduleDetailMapper">
+
+    <resultMap type="RosterScheduleDetail" id="RosterScheduleDetailResult">
+        <result property="id"    column="id"    />
+        <result property="date"    column="date"    />
+        <result property="roomId"    column="room_id"    />
+        <result property="shiftType"    column="shift_type"    />
+        <result property="isAdjusted"    column="is_adjusted"    />
+        <result property="adjustReason"    column="adjust_reason"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+
+        <!-- 关联房间信息 -->
+        <association property="room" javaType="RosterRoom">
+            <id property="id" column="room_id"/>
+            <result property="roomNumber" column="room_number"/>
+            <result property="roomName" column="room_name"/>
+            <result property="status" column="status"/>
+            <result property="createBy" column="room_create_by"/>
+            <result property="createTime" column="room_create_time"/>
+            <result property="updateBy" column="room_update_by"/>
+            <result property="updateTime" column="room_update_time"/>
+        </association>
+
+
+    </resultMap>
+
+    <sql id="selectRosterScheduleDetailVo">
+        SELECT
+        rsd.id,
+        rsd.date,
+        rsd.room_id,
+        rsd.shift_type,
+        rsd.is_adjusted,
+        rsd.adjust_reason,
+        rsd.create_by,
+        rsd.create_time,
+        rsd.update_by,
+        rsd.update_time,
+
+        <!-- 房间信息 -->
+        rr.id as room_id,
+        rr.room_number,
+        rr.room_name,
+        rr.status,
+        rr.create_by as room_create_by,
+        rr.create_time as room_create_time,
+        rr.update_by as room_update_by,
+        rr.update_time as room_update_time
+
+        FROM roster_schedule_detail rsd
+        LEFT JOIN roster_room rr ON rsd.room_id = rr.id
+    </sql>
+
+    <select id="selectRosterScheduleDetailList" parameterType="RosterScheduleDetail" resultMap="RosterScheduleDetailResult">
+        <include refid="selectRosterScheduleDetailVo"/>
+        <where>
+            <if test="date != null"> AND rsd.date = #{date}</if>
+            <if test="roomId != null"> AND rsd.room_id = #{roomId}</if>
+            <if test="shiftType != null and shiftType != ''"> AND rsd.shift_type = #{shiftType}</if>
+            <if test="isAdjusted != null and isAdjusted != ''"> AND rsd.is_adjusted = #{isAdjusted}</if>
+            <if test="adjustReason != null and adjustReason != ''"> AND rsd.adjust_reason = #{adjustReason}</if>
+        </where>
+    </select>
+
+    <!-- 查询不重复的日期列表 -->
+    <select id="selectDistinctDates" resultType="java.util.Date">
+        SELECT DISTINCT date
+        FROM roster_schedule_detail
+        ORDER BY date DESC
+    </select>
+
+    <select id="selectRosterScheduleDetailById" parameterType="Long" resultMap="RosterScheduleDetailResult">
+        <include refid="selectRosterScheduleDetailVo"/>
+        WHERE rsd.id = #{id}
+    </select>
+
+    <select id="selectCountByDate" parameterType="java.util.Date" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM roster_schedule_detail rsd
+        WHERE rsd.date = #{date, jdbcType=DATE} <!-- 明确指定 JDBC 类型为 DATE -->
+    </select>
+
+    <insert id="insertRosterScheduleDetail" parameterType="RosterScheduleDetail" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO roster_schedule_detail
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="date != null">date,</if>
+            <if test="roomId != null">room_id,</if>
+            <if test="shiftType != null">shift_type,</if>
+            <if test="isAdjusted != null">is_adjusted,</if>
+            <if test="adjustReason != null">adjust_reason,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+        </trim>
+        <trim prefix="VALUES (" suffix=")" suffixOverrides=",">
+            <if test="date != null">#{date},</if>
+            <if test="roomId != null">#{roomId},</if>
+            <if test="shiftType != null">#{shiftType},</if>
+            <if test="isAdjusted != null">#{isAdjusted},</if>
+            <if test="adjustReason != null">#{adjustReason},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateRosterScheduleDetail" parameterType="RosterScheduleDetail">
+        UPDATE roster_schedule_detail
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="date != null">date = #{date},</if>
+            <if test="roomId != null">room_id = #{roomId},</if>
+            <if test="shiftType != null">shift_type = #{shiftType},</if>
+            <if test="isAdjusted != null">is_adjusted = #{isAdjusted},</if>
+            <if test="adjustReason != null">adjust_reason = #{adjustReason},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteRosterScheduleDetailById" parameterType="Long">
+        DELETE FROM roster_schedule_detail WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteRosterScheduleDetailByIds" parameterType="String">
+        DELETE FROM roster_schedule_detail WHERE id IN
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>
