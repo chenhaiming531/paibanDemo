@@ -389,7 +389,7 @@
 </template>
 
 <script>
-import { intelligent, view, getStaffList, updateDetail, distinctDates ,monthlyDuty ,listRosterDuty ,updateRosterDuty ,monthlyExport} from "@/api/detail/detail"
+import { intelligent, view, getStaffList, updateDetail, distinctDates ,monthlyDuty ,listRosterDuty ,updateRosterDuty ,monthlyExport, checkMonthData} from "@/api/detail/detail"
 import { listStaff } from "@/api/staff/staff"
 
 export default {
@@ -596,7 +596,36 @@ export default {
         },
     handleMonthlyDuty() {
       const formattedDate = this.formatDate(this.current);
+      const monthStr = formattedDate.substring(0, 7); // 获取 yyyy-MM 格式
 
+      // 先检查该月份是否有数据
+      checkMonthData(formattedDate).then(response => {
+        const hasData = response.data;
+        
+        if (hasData) {
+          // 如果有数据，弹出磨益确认提示框
+          this.$modal.confirm(
+            `当前选中的月份(${monthStr})已经有数据，重新生成会清空原有的数据，建议你手动调整，是否还要重新生成？`,
+            '月度排班提示'
+          ).then(() => {
+            // 用户点击确定，执行月度排班
+            this.executeMonthlyDuty(formattedDate);
+          }).catch(() => {
+            // 用户点击取消，不执行任何操作
+            console.log('用户取消了月度排班操作');
+          });
+        } else {
+          // 如果没有数据，直接执行月度排班
+          this.$modal.msgInfo(`当前月份(${monthStr})没有数据，稍候稍候为你执行月度排班...`);
+          this.executeMonthlyDuty(formattedDate);
+        }
+      }).catch(error => {
+        this.$modal.msgError('检查月度数据失败');
+        console.error('检查月度数据错误:', error);
+      });
+    },
+
+    executeMonthlyDuty(formattedDate) {
       // 创建符合后端要求的请求数据格式
       const requestData = {
         date: formattedDate

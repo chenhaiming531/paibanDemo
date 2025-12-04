@@ -104,6 +104,47 @@ public class RosterScheduleDetailController extends BaseController
     }
 
     /**
+     * 检查指定月份是否有排班数据
+     */
+    @PreAuthorize("@ss.hasPermi('detail:detail:list')")
+    @GetMapping("/checkMonthData")
+    public AjaxResult checkMonthData(@RequestParam String date) throws ParseException {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Date inputDate = sdf.parse(date);
+
+        // 转换为Calendar操作
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(inputDate);
+
+        // 获取当月的第一天和最后一天
+        cal.set(Calendar.DAY_OF_MONTH, 1);
+        LocalDateTime firstDateTime = LocalDateTime.ofInstant(cal.getTime().toInstant(), ZoneId.systemDefault());
+        LocalDateTime truncatedFirstDateTime = firstDateTime.truncatedTo(ChronoUnit.DAYS);
+        Date firstDayOfMonth = Date.from(truncatedFirstDateTime.atZone(ZoneId.systemDefault()).toInstant());
+
+        cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH));
+        LocalDateTime lastDateTime = LocalDateTime.ofInstant(cal.getTime().toInstant(), ZoneId.systemDefault());
+        LocalDateTime truncatedLastDateTime = lastDateTime.truncatedTo(ChronoUnit.DAYS);
+        // 将最后一天的时间设置为23:59:59以包含整个月份的最后一天
+        LocalDateTime endOfLastDay = truncatedLastDateTime.plusDays(1).minusSeconds(1);
+        Date lastDayOfMonth = Date.from(endOfLastDay.atZone(ZoneId.systemDefault()).toInstant());
+
+        // 查询该月份的所有值班记录
+        RosterDuty dutyQuery = new RosterDuty();
+        List<RosterDuty> allDuties = rosterDutyService.selectRosterDutyList(dutyQuery);
+
+        // 过滤出指定月份的值班记录
+        List<RosterDuty> monthlyDuties = allDuties.stream()
+                .filter(duty -> !duty.getDutyTime().before(firstDayOfMonth) &&
+                        !duty.getDutyTime().after(lastDayOfMonth))
+                .collect(Collectors.toList());
+
+        // 如果该月份有数据，返回true；否则返回false
+        boolean hasData = !monthlyDuties.isEmpty();
+        return AjaxResult.success(hasData);
+    }
+
+    /**
      * 导出安排排班列表
      */
     @PreAuthorize("@ss.hasPermi('detail:detail:export')")

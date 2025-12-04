@@ -81,6 +81,15 @@ export function listRosterDuty() {
   })
 }
 
+// 检查指定月份是否有排班数据
+export function checkMonthData(date) {
+  return request({
+    url: '/detail/detail/checkMonthData',
+    method: 'get',
+    params: { date: date }
+  })
+}
+
 // 更新值班人员
 export function updateRosterDuty(data) {
   return request({
