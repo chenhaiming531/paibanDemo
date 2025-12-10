@@ -168,6 +168,17 @@
           v-hasPermi="['staff:staff:edit']"
         >调整休息</el-button>
       </el-col>
+      <el-col :span="1.5">
+        <el-button
+          type="success"
+          plain
+          icon="el-icon-view"
+          size="mini"
+          :disabled="multiple"
+          @click="handleViewLeave"
+          v-hasPermi="['staff:staff:query']"
+        >查看休假</el-button>
+      </el-col>
 <!--      <el-col :span="1.5">
         <el-button
           type="warning"
@@ -347,12 +358,12 @@
     </el-dialog>
     <!-- 设置标签对话框 -->
  <!-- 设置标签对话框 -->
-    <el-dialog title="设置标签" :visible.sync="tagOpen" width="600px" append-to-body>
-      <el-form :model="tagForm" label-width="80px">
-        <el-form-item label="标签">
+    <el-dialog title="调整休息" :visible.sync="tagOpen" width="600px" append-to-body>
+      <el-form :model="tagForm" label-width="100px">
+        <el-form-item label="休假类型">
           <el-select
             v-model="tagForm.staffLeave"
-            placeholder="请选择标签"
+            placeholder="请选择休假类型"
             clearable
             @change="handleTagChange"
           >
@@ -365,30 +376,36 @@
           </el-select>
         </el-form-item>
 
-        <!-- 时间段选择区域 -->
+        <!-- 休假时间段选择区域 -->
         <el-form-item
           v-if="showTimeRange"
-          label="时间段"
+          label="休假时间"
           prop="timeRanges"
         >
-          <div v-for="(range, index) in tagForm.timeRanges" :key="index" class="time-range-item">
-            <el-date-picker
-              v-model="range.timeRange"
-              type="daterange"
-              range-separator="至"
-              start-placeholder="开始日期"
-              end-placeholder="结束日期"
-              value-format="yyyy-MM-dd"
-              style="width: 380px; margin-right: 10px;"
-            />
-            <el-button
-              v-if="tagForm.timeRanges.length > 1"
-              type="danger"
-              icon="el-icon-delete"
-              circle
-              size="mini"
-              @click="removeTimeRange(index)"
-            ></el-button>
+          <div v-for="(range, index) in tagForm.timeRanges" :key="index" style="margin-bottom: 10px;">
+            <el-row :gutter="10" align="middle">
+              <el-col :span="20">
+                <el-date-picker
+                  v-model="range.timeRange"
+                  type="daterange"
+                  range-separator="至"
+                  start-placeholder="休假开始日期"
+                  end-placeholder="休假结束日期"
+                  value-format="yyyy-MM-dd"
+                  style="width: 100%;"
+                />
+              </el-col>
+              <el-col :span="4">
+                <el-button
+                  v-if="tagForm.timeRanges.length > 1"
+                  type="danger"
+                  icon="el-icon-delete"
+                  circle
+                  size="mini"
+                  @click="removeTimeRange(index)"
+                ></el-button>
+              </el-col>
+            </el-row>
           </div>
 
           <el-button
@@ -397,12 +414,29 @@
             size="mini"
             @click="addTimeRange"
             style="margin-top: 10px;"
-          >添加时间段</el-button>
+          >添加休假时间段</el-button>
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button type="primary" @click="submitTagForm">确 定</el-button>
         <el-button @click="tagOpen = false">取 消</el-button>
+      </div>
+    </el-dialog>
+
+    <!-- 查看休假对话框 -->
+    <el-dialog title="休假信息" :visible.sync="leaveViewOpen" width="600px" append-to-body>
+      <el-table :data="currentStaffLeaveInfo" v-loading="leaveViewLoading" border="">
+        <el-table-column prop="staffName" label="人员姓名" align="center" />
+        <el-table-column prop="staffLeave" label="休假类型" align="center">
+          <template slot-scope="scope">
+            <dict-tag :options="dict.type.leave" :value="scope.row.staffLeave"/>
+          </template>
+        </el-table-column>
+        <el-table-column prop="staffLeaveStartTime" label="开始日期" align="center" />
+        <el-table-column prop="staffLeaveEndTime" label="结束日期" align="center" />
+      </el-table>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="leaveViewOpen = false">关 闭</el-button>
       </div>
     </el-dialog>
   </div>
@@ -495,7 +529,10 @@ export default {
             timeRanges: [{ timeRange: [] }] // 时间段数组
           },
           // 需要显示时间段的标签值（根据实际情况调整）
-                timeRangeTags: ['1', '2'] // 假设1=休假，2=外出
+                timeRangeTags: ['1', '2'], // 假设1=休假，2=外出
+          leaveViewOpen: false, // 控制休假信息对话框显示
+          leaveViewLoading: false, // 休假信息加载状态
+          currentStaffLeaveInfo: [] // 当前员工的休假信息
     }
   },
   created() {
@@ -776,6 +813,18 @@ export default {
         this.loading = false;
       });
     },
+
+    /** 查看休假按钮操作 */
+    handleViewLeave() {
+      if (this.ids.length === 0) {
+        this.$modal.msgWarning("请选择要查看的人员");
+        return;
+      }
+
+      // 从当前表格中找到选中的人员信息
+      this.currentStaffLeaveInfo = this.staffList.filter(staff => this.ids.includes(staff.id));
+      this.leaveViewOpen = true;
+    }
   }
 }
 </script>

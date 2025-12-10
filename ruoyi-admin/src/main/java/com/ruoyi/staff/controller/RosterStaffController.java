@@ -88,6 +88,31 @@ public class RosterStaffController extends BaseController
         try {
             // 提取所有时间范围（从第一个人员获取，因为所有人员的时间范围相同）
             List<Map<String, String>> allTimeRanges = (List<Map<String, String>>) paramsList.get(0).get("timeRanges");
+            
+            // 获取休假标签类型
+            String staffLeaveTag = (String) paramsList.get(0).get("staffLeave");
+            
+            // 获取最早的开始时间和最晚的结束时间
+            String earliestStartTime = null;
+            String latestEndTime = null;
+            
+            if (allTimeRanges != null && !allTimeRanges.isEmpty()) {
+                for (Map<String, String> timeRange : allTimeRanges) {
+                    String startTime = timeRange.get("startTime");
+                    String endTime = timeRange.get("endTime");
+                    
+                    if (startTime != null) {
+                        if (earliestStartTime == null || startTime.compareTo(earliestStartTime) < 0) {
+                            earliestStartTime = startTime;
+                        }
+                    }
+                    if (endTime != null) {
+                        if (latestEndTime == null || endTime.compareTo(latestEndTime) > 0) {
+                            latestEndTime = endTime;
+                        }
+                    }
+                }
+            }
 
             // 处理所有时间范围，获取每个时间段的中间日期
             List<String> allDates = new ArrayList<>();
@@ -120,6 +145,22 @@ public class RosterStaffController extends BaseController
                     }
                 }
             }
+            
+            // 保存休假时间到员工记录
+            logger.warn("【诊断】batchTag: earliestStartTime={}, latestEndTime={}, staffLeaveTag={}",
+                    earliestStartTime, latestEndTime, staffLeaveTag);
+            
+            for (Integer staffId : ids) {
+                RosterStaff staff = new RosterStaff();
+                staff.setId(staffId.longValue());
+                staff.setStaffLeave(staffLeaveTag);
+                staff.setStaffLeaveStartTime(earliestStartTime);
+                staff.setStaffLeaveEndTime(latestEndTime);
+                rosterStaffService.updateRosterStaff(staff);
+                logger.warn("【诊断】已保存员工 ID={} 的休假数据: startTime={}, endTime={}",
+                        staffId, earliestStartTime, latestEndTime);
+            }
+            
             for (int i = 0; i < allDates.size(); i++) {
                 // 传入的日期
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
@@ -128,7 +169,7 @@ public class RosterStaffController extends BaseController
                 // 转换为Calendar操作
                 Calendar cal = Calendar.getInstance();
                 cal.setTime(inputDate);
-                intelligentScheduleForDay(inputDate,ids);
+                intelligentScheduleForDay(inputDate, ids);
             }
 
             return AjaxResult.success("操作成功", allDates);
@@ -231,14 +272,14 @@ public class RosterStaffController extends BaseController
             Map<Long, Integer> randomIndexCounterMap = new HashMap<>();
 
             // 处理7L类型
-            processStaffType(7L, ids, alreadyScheduledStaffIds, previousDaySecondaryStaff, availableStaffMap, randomIndicesMap, randomIndexCounterMap);
+            processStaffType(7L, ids, alreadyScheduledStaffIds, previousDaySecondaryStaff, availableStaffMap, randomIndicesMap, randomIndexCounterMap, truncatedDate);
 
             // 处理13L类型（用于顶替7L人员）
-            processStaffType(13L, ids, alreadyScheduledStaffIds, previousDaySecondaryStaff, availableStaffMap, randomIndicesMap, randomIndexCounterMap);
+            processStaffType(13L, ids, alreadyScheduledStaffIds, previousDaySecondaryStaff, availableStaffMap, randomIndicesMap, randomIndexCounterMap, truncatedDate);
 
             // 处理8L、10L类型
-            processStaffType(8L, ids, alreadyScheduledStaffIds, previousDaySecondaryStaff, availableStaffMap, randomIndicesMap, randomIndexCounterMap);
-            processStaffType(10L, ids, alreadyScheduledStaffIds, previousDaySecondaryStaff, availableStaffMap, randomIndicesMap, randomIndexCounterMap);
+            processStaffType(8L, ids, alreadyScheduledStaffIds, previousDaySecondaryStaff, availableStaffMap, randomIndicesMap, randomIndexCounterMap, truncatedDate);
+            processStaffType(10L, ids, alreadyScheduledStaffIds, previousDaySecondaryStaff, availableStaffMap, randomIndicesMap, randomIndexCounterMap, truncatedDate);
 
             // 统计当前已经使用的7L人员数量
             int current7LUsageCount = alreadyScheduledStaffIds.getOrDefault(7L, new HashSet<>()).size();
@@ -427,14 +468,15 @@ public class RosterStaffController extends BaseController
     }
 
     /**
-     * 处理特定类型的人员（修改后，考虑前一天次班人员）
+     * 处理特定类型的人员（修改后，考虑前一天次班人员和休假时间）
      */
     private void processStaffType(Long staffTypeId, List<Integer> ids,
                                   Map<Long, Set<Long>> alreadyScheduledStaffIds,
                                   Set<Long> previousDaySecondaryStaff,
                                   Map<Long, List<RosterStaff>> availableStaffMap,
                                   Map<Long, List<Integer>> randomIndicesMap,
-                                  Map<Long, Integer> randomIndexCounterMap) {
+                                  Map<Long, Integer> randomIndexCounterMap,
+                                  Date truncatedDate) {
         try {
             // 查询所有可用的该类型人员
             RosterStaff staffType = new RosterStaff();
@@ -442,12 +484,13 @@ public class RosterStaffController extends BaseController
             staffType.setStatus("0"); // 添加状态过滤条件
             List<RosterStaff> availableStaffList = rosterStaffService.selectRosterStaffList2(staffType);
 
-            // 过滤掉当前被标记的人员（ids中的该类型人员）、已经排班的人员和前一天的次班人员
+            // 过滤掉当前被标记的人员（ids中的该类型人员）、已经排班的人员、前一天的次班人员和休假期间的人员
             Set<Long> alreadyScheduled = alreadyScheduledStaffIds.getOrDefault(staffTypeId, new HashSet<>());
             List<RosterStaff> filteredStaffList = availableStaffList.stream()
                     .filter(staff -> !ids.contains(staff.getId().intValue())) // 排除当前被标记的人员
                     .filter(staff -> !alreadyScheduled.contains(staff.getId())) // 排除已经排班的人员
                     .filter(staff -> !previousDaySecondaryStaff.contains(staff.getId())) // 排除前一天的次班人员
+                    .filter(staff -> !isStaffOnLeave(staff, truncatedDate)) // 排除休假期间的人员
                     .collect(Collectors.toList());
 
             // 创建随机索引列表
@@ -468,7 +511,53 @@ public class RosterStaffController extends BaseController
         }
     }
 
+    /**
+     * 判断员工在指定日期是否在休假
+     */
+    private boolean isStaffOnLeave(RosterStaff staff, Date checkDate) {
+        if (staff == null || checkDate == null) {
+            return false;
+        }
 
+        String staffLeaveStartTime = staff.getStaffLeaveStartTime();
+        String staffLeaveEndTime = staff.getStaffLeaveEndTime();
+        
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        String checkDateStr = sdf.format(checkDate);
+        String staffName = staff.getStaffName();
+        
+        // 沒有设置休假时间，则不在休假
+        if (staffLeaveStartTime == null || staffLeaveEndTime == null) {
+            return false;
+        }
+
+        try {
+            // 提取开始时间的日期部分（处理 "2025-12-18 00:00:00" 格式）
+            String startDateStr = staffLeaveStartTime;
+            if (startDateStr.contains(" ")) {
+                startDateStr = startDateStr.substring(0, 10);
+            }
+
+            // 提取结束时间的日期部分（处理 "2025-12-18 00:00:00" 格式）
+            String endDateStr = staffLeaveEndTime;
+            if (endDateStr.contains(" ")) {
+                endDateStr = endDateStr.substring(0, 10);
+            }
+
+            // 比较日期，如果在休假时间段内，则返回true
+            boolean isOnLeave = checkDateStr.compareTo(startDateStr) >= 0 && checkDateStr.compareTo(endDateStr) <= 0;
+            
+            if (isOnLeave) {
+                logger.warn("*** 【】 {} 在日期 {} 处于休假期间（{}~{}）***",
+                        staffName, checkDateStr, startDateStr, endDateStr);
+            }
+            
+            return isOnLeave;
+        } catch (Exception e) {
+            logger.error("判断休假时间失败", e);
+            return false;
+        }
+    }
 
     /**
      * 批量取消标签

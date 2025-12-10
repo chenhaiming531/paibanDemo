@@ -13,6 +13,7 @@
         <result property="staffPriority"    column="staff_priority"    />
         <result property="staffDutySort"    column="staff_duty_sort"    />
         <result property="staffLeaveEndTime"    column="staff_leave_end_time"    />
+        <result property="staffLeaveStartTime"    column="staff_leave_start_time"    />
         <result property="staffGender"    column="staff_gender"    />
         <result property="department"    column="department"    />
         <result property="unit"    column="unit"    />
@@ -28,7 +29,7 @@
     </resultMap>
 
     <sql id="selectRosterStaffVo">
-        select id, staff_name, staff_type_id, staff_leave,staff_sort, staff_duty_sort,staff_priority, staff_leave_end_time,staff_gender, department, unit, job_title,
+        select id, staff_name, staff_type_id, staff_leave,staff_sort, staff_duty_sort,staff_priority, staff_leave_end_time,staff_leave_start_time,staff_gender, department, unit, job_title,
                hospital_time, begin_hospital_time, end_hospital_time,
                status, create_by, create_time, update_by, update_time
         from roster_staff
@@ -60,12 +61,6 @@
             <if test="staffName != null  and staffName != ''"> and staff_name like concat('%', #{staffName}, '%')</if>
             <if test="staffTypeId != null "> and staff_type_id = #{staffTypeId}</if>
             <if test="staffLeave != null  and staffLeave != ''"> and staff_leave = #{staffLeave}</if>
-            <if test="staffLeaveEndTime != null">
-                and staff_leave_end_time = #{staffLeaveEndTime}
-            </if>
-            <if test="staffLeaveEndTime == null">
-                and staff_leave_end_time is null
-            </if>
             <if test="staffGender != null  and staffGender != ''"> and staff_gender = #{staffGender}</if>
             <if test="department != null  and department != ''"> and department = #{department}</if>
             <if test="unit != null  and unit != ''"> and unit = #{unit}</if>
@@ -75,6 +70,7 @@
             <if test="endHospitalTime != null  and endHospitalTime != ''"> and end_hospital_time = #{endHospitalTime}</if>
             <if test="status != null  and status != ''"> and status = #{status}</if>
         </where>
+        order by staff_duty_sort asc, id asc
     </select>
 
     <select id="selectRosterStaffById" parameterType="Long" resultMap="RosterStaffResult">
@@ -92,6 +88,7 @@
             <if test="staffDutySort != null">staff_duty_sort,</if>
             <if test="staffPriority != null">staff_priority,</if>
             <if test="staffLeaveEndTime != null">staff_leave_end_time,</if>
+            <if test="staffLeaveStartTime != null">staff_leave_start_time,</if>
             <if test="staffGender != null">staff_gender,</if>
             <if test="department != null">department,</if>
             <if test="unit != null">unit,</if>
@@ -113,6 +110,7 @@
             <if test="staffDutySort != null">#{staffDutySort},</if>
             <if test="staffPriority != null">#{staffPriority},</if>
             <if test="staffLeaveEndTime != null">#{staffLeaveEndTime},</if>
+            <if test="staffLeaveStartTime != null">#{staffLeaveStartTime},</if>
             <if test="staffGender != null">#{staffGender},</if>
             <if test="department != null">#{department},</if>
             <if test="unit != null">#{unit},</if>
@@ -138,6 +136,7 @@
             <if test="staffDutySort != null">staff_duty_sort = #{staffDutySort},</if>
             <if test="staffPriority != null">staff_priority = #{staffPriority},</if>
             <if test="staffLeaveEndTime != null">staff_leave_end_time = #{staffLeaveEndTime},</if>
+            <if test="staffLeaveStartTime != null">staff_leave_start_time = #{staffLeaveStartTime},</if>
             <if test="staffGender != null">staff_gender = #{staffGender},</if>
             <if test="department != null">department = #{department},</if>
             <if test="unit != null">unit = #{unit},</if>
@@ -180,6 +179,13 @@
             <trim prefix="staff_leave_end_time = case" suffix="end,">
                 <foreach collection="list" item="item">
                     when id = #{item.id} then #{item.staffLeaveEndTime}
+                </foreach>
+            </trim>
+
+            <!-- 处理staff_leave_start_time字段 -->
+            <trim prefix="staff_leave_start_time = case" suffix="end,">
+                <foreach collection="list" item="item">
+                    when id = #{item.id} then #{item.staffLeaveStartTime}
                 </foreach>
             </trim>
 

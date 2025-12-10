@@ -42,9 +42,16 @@
             v-hasPermi="['detail:detail:export']"
           >月度导出</el-button>
         </el-col>
+        <el-col :span="1.5">
+          <el-button
+            type="success"
+            plain
+            icon="el-icon-info"
+            size="mini"
+            @click="showRules"
+          >生成规则</el-button>
+        </el-col>
       </el-row>
-
-    <!-- 自定义日历单元格 -->
     <el-calendar v-model="calendarValue">
       <template slot="dateCell" slot-scope="{date, data}">
         <div
@@ -385,6 +392,42 @@
             <el-button type="primary" @click="submitDutyAdjustForm">确 定</el-button>
           </div>
         </el-dialog>
+    <!-- 生成规则对话框 -->
+    <el-dialog
+      title="月度排班规则"
+      :visible.sync="rulesDialogVisible"
+      width="50%"
+      @close="rulesDialogVisible = false">
+      <div class="rules-content">
+        <h3>值班表输出</h3>
+        <ul>
+          <li>6L(一线医生)：每天轮转1人</li>
+          <li>5L(二线医生)：每2天轮转1人</li>
+          <li>8L/10L(次班)：每天轮转1人</li>
+          <li>13L(护理)：每天轮转1人</li>
+        </ul>
+        
+        <h3>排班表输出</h3>
+        <ul>
+          <li>每个房间分配1-3名医生</li>
+          <li>每个房间分配1-2名次班/护理</li>
+        </ul>
+        
+        <h3>跳过规则</h3>
+        <ul>
+          <li>员工不在休假时间段自动跳过</li>
+          <li>不正常状态人员自动跳过</li>
+        </ul>
+        
+        <h3>跨月接续</h3>
+        <ul>
+          <li>从上月最后一天的值班人的下一个人开始</li>
+        </ul>
+      </div>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="rulesDialogVisible = false">关闭</el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -411,6 +454,7 @@ export default {
       detailList: [],
       loading: false,
       dataViewVisible: false,
+      rulesDialogVisible: false,
       adjustDialogVisible: false,
       selectedRows: [],
       staffOptions: [],
@@ -965,12 +1009,17 @@ removeOperatingTable(index) {
       this.$refs.adjustForm.clearValidate()
     },
 
-    /** 导出按钮操作 */
+    /** 导出按黿操作 */
     handleExport() {
       const formattedDate = this.formatDate(this.current)
       this.download('/detail/detail/export', {
         date: formattedDate
       }, `排班数据_${formattedDate}.docx`)
+    },
+    
+    /** 输出年代规则 */
+    showRules() {
+      this.rulesDialogVisible = true
     }
   }
 }
@@ -1187,5 +1236,35 @@ removeOperatingTable(index) {
   padding: 0 5px;
   height: 20px;
   line-height: 20px;
+}
+
+/* 生成规则比例核上输出样式 */
+.rules-content {
+  line-height: 1.8;
+  color: #333;
+}
+
+.rules-content h3 {
+  margin-top: 20px;
+  margin-bottom: 10px;
+  color: #333;
+  font-size: 16px;
+  font-weight: bold;
+  border-bottom: 2px solid #409EFF;
+  padding-bottom: 8px;
+}
+
+.rules-content h3:first-child {
+  margin-top: 0;
+}
+
+.rules-content ul {
+  margin-left: 20px;
+  padding: 0;
+}
+
+.rules-content li {
+  margin-bottom: 8px;
+  color: #606266;
 }
 </style>

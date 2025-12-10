@@ -532,7 +532,9 @@ public class RosterScheduleDetailController extends BaseController
     @PostMapping("/monthlyExport")
     public void monthlyExport(HttpServletResponse response, @RequestParam(required = false) String date)
             throws ParseException, IOException {
-        try {
+        
+        
+                try {
             // 解析日期参数
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
             Date inputDate = date != null ? sdf.parse(date) : new Date();
@@ -704,58 +706,110 @@ public class RosterScheduleDetailController extends BaseController
                         }
                     });
 
-                    List<String> dutyNames = new ArrayList<>();
-                    for (int i = 0; i < dayDuties.size(); i++) {
-                        RosterDuty duty = dayDuties.get(i);
-                        RosterStaff staff = rosterStaffService.selectRosterStaffById(duty.getDutyStaffId());
-                        String name = staff != null ? staff.getStaffName() : "未知人员";
-
-                        // 根据位置添加前缀
-                        String prefix = "";
-                        if (i < 2) {
-                            prefix = "医:"; // 第一、二个加"医："
-                        } else if (i < 4) {
-                            prefix = "护:"; // 第三、四个加"护："
-                        } else if (i == 4) {
-                            prefix = "C:";   // 第五个加"C"
-                        } else if (i == 5) {
-                            prefix = "E:";   // 第六个加"E"
-                        }
-
-                        dutyNames.add(prefix + name);
-                    }
-
-                    // 按两两分组显示值班人员
-                    if (!dutyNames.isEmpty()) {
+                    // 按职位需求的顶序序显示值班人员（顺序：6L, 5L, 13L, 13L, 8L, 10L）
+                    if (!dayDuties.isEmpty()) {
                         XWPFParagraph namesParagraph = cell.addParagraph();
                         namesParagraph.setAlignment(ParagraphAlignment.LEFT);
 
-                        StringBuilder currentLine = new StringBuilder();
-                        int namesInLine = 0;
+                        // 按职位类型分类存储
+                        String oneLineDoctor = "";        // 6L一线医生
+                        String secondLineDoctor = "";     // 5L二线医生
+                        List<String> cpbNursingList = new ArrayList<>();  // 13L CPB护士（第1个）
+                        List<String> ecmoNursingList = new ArrayList<>(); // 13L ECMO护士（第2个）
+                        List<String> cpbTraineeList = new ArrayList<>();  // 8L C进修
+                        List<String> ecmoTraineeList = new ArrayList<>(); // 10L E进修
 
-                        for (int i = 0; i < dutyNames.size(); i++) {
-                            if (namesInLine == 2) {
-                                // 换行
-                                XWPFRun run = namesParagraph.createRun();
-                                run.setText(currentLine.toString());
-                                run.setFontSize(10);
-                                run.addBreak();
-
-                                currentLine = new StringBuilder();
-                                namesInLine = 0;
+                        int count13L = 0;
+                        for (RosterDuty duty : dayDuties) {
+                            RosterStaff staff = rosterStaffService.selectRosterStaffById(duty.getDutyStaffId());
+                            if (staff == null) continue;
+                            
+                            String name = staff.getStaffName();
+                            Long staffTypeId = staff.getStaffTypeId();
+                            
+                            if (staffTypeId == 6L) {
+                                oneLineDoctor = name;
+                            } else if (staffTypeId == 5L) {
+                                secondLineDoctor = name;
+                            } else if (staffTypeId == 13L) {
+                                if (count13L == 0) {
+                                    cpbNursingList.add(name);
+                                } else if (count13L == 1) {
+                                    ecmoNursingList.add(name);
+                                }
+                                count13L++;
+                            } else if (staffTypeId == 8L) {
+                                cpbTraineeList.add(name);
+                            } else if (staffTypeId == 10L) {
+                                ecmoTraineeList.add(name);
                             }
-
-                            if (namesInLine > 0) {
-                                currentLine.append("、");
-                            }
-                            currentLine.append(dutyNames.get(i));
-                            namesInLine++;
                         }
 
-                        // 添加最后一行
-                        if (currentLine.length() > 0) {
+                        // 按顺序输出：6L → 5L → 13L(CPB) → 13L(ECMO) → 8L → 10L
+                        boolean isFirstLine = true;
+                        
+                        // 6L一线医生
+                        if (!oneLineDoctor.isEmpty()) {
+                            if (!isFirstLine) {
+                                namesParagraph.createRun().addBreak();
+                            }
                             XWPFRun run = namesParagraph.createRun();
-                            run.setText(currentLine.toString());
+                            run.setText("一线医生:" + oneLineDoctor);
+                            run.setFontSize(10);
+                            isFirstLine = false;
+                        }
+                        
+                        // 5L二线医生
+                        if (!secondLineDoctor.isEmpty()) {
+                            if (!isFirstLine) {
+                                namesParagraph.createRun().addBreak();
+                            }
+                            XWPFRun run = namesParagraph.createRun();
+                            run.setText("二线医生:" + secondLineDoctor);
+                            run.setFontSize(10);
+                            isFirstLine = false;
+                        }
+                        
+                        // 13L CPB护士
+                        if (!cpbNursingList.isEmpty()) {
+                            if (!isFirstLine) {
+                                namesParagraph.createRun().addBreak();
+                            }
+                            XWPFRun run = namesParagraph.createRun();
+                            run.setText("CPB 护士:" + String.join("、", cpbNursingList));
+                            run.setFontSize(10);
+                            isFirstLine = false;
+                        }
+                        
+                        // 13L ECMO护士
+                        if (!ecmoNursingList.isEmpty()) {
+                            if (!isFirstLine) {
+                                namesParagraph.createRun().addBreak();
+                            }
+                            XWPFRun run = namesParagraph.createRun();
+                            run.setText("ECMO 护士:" + String.join("、", ecmoNursingList));
+                            run.setFontSize(10);
+                            isFirstLine = false;
+                        }
+                        
+                        // 8L C进修
+                        if (!cpbTraineeList.isEmpty()) {
+                            if (!isFirstLine) {
+                                namesParagraph.createRun().addBreak();
+                            }
+                            XWPFRun run = namesParagraph.createRun();
+                            run.setText("C 进修:" + String.join("、", cpbTraineeList));
+                            run.setFontSize(10);
+                            isFirstLine = false;
+                        }
+                        
+                        // 10L E进修
+                        if (!ecmoTraineeList.isEmpty()) {
+                            if (!isFirstLine) {
+                                namesParagraph.createRun().addBreak();
+                            }
+                            XWPFRun run = namesParagraph.createRun();
+                            run.setText("E 进修:" + String.join("、", ecmoTraineeList));
                             run.setFontSize(10);
                         }
                     }
@@ -1165,7 +1219,9 @@ public class RosterScheduleDetailController extends BaseController
     /**
      * 月度排班与值班安排
      */
-    @PreAuthorize("@ss.hasPermi('detail:detail:add')")
+    @PreAuthorize
+
+            ("@ss.hasPermi('detail:detail:add')")
     @Log(title = "月度排班与值班安排", businessType = BusinessType.INSERT)
     @PostMapping("/monthlyDuty")
     public AjaxResult monthlyArrangement(@RequestBody Map<String, Object> params) {
@@ -1204,59 +1260,6 @@ public class RosterScheduleDetailController extends BaseController
             deleteExistingScheduleDataForMonth(firstDayOfMonth, lastDayOfMonth);
             deleteMonthlyDuties(firstDayOfMonth, lastDayOfMonth);
 
-            // 查询各类型员工
-            RosterStaff staffType5 = new RosterStaff();
-            staffType5.setStaffTypeId(5L);
-            staffType5.setStatus("0");
-            List<RosterStaff> staffList5 = rosterStaffService.selectRosterStaffList(staffType5);
-            // 按 staffDutySort 从小到大排序
-            staffList5.sort(Comparator.comparingInt(staff ->
-                    Optional.ofNullable(staff.getStaffDutySort()).orElse(0)
-            ));
-
-            RosterStaff staffType6 = new RosterStaff();
-            staffType6.setStaffTypeId(6L);
-            staffType6.setStatus("0");
-            List<RosterStaff> staffList6 = rosterStaffService.selectRosterStaffList(staffType6);
-            // 按 staffDutySort 从小到大排序
-            staffList6.sort(Comparator.comparingInt(staff ->
-                    Optional.ofNullable(staff.getStaffDutySort()).orElse(0)
-            ));
-
-            // 查询13L类型人员（值班人员）
-            RosterStaff staffType13 = new RosterStaff();
-            staffType13.setStaffTypeId(13L);
-            staffType13.setStatus("0");
-            List<RosterStaff> staffList13 = rosterStaffService.selectRosterStaffList(staffType13);
-            // 按 staffDutySort 从小到大排序
-            staffList13.sort(Comparator.comparingInt(staff ->
-                    Optional.ofNullable(staff.getStaffDutySort()).orElse(0)
-            ));
-
-            // 查询8L类型人员
-            RosterStaff staffType8 = new RosterStaff();
-            staffType8.setStaffTypeId(8L);
-            staffType8.setStatus("0");
-            List<RosterStaff> staffList8 = rosterStaffService.selectRosterStaffList(staffType8);
-            // 按 staffDutySort 从小到大排序
-            staffList8.sort(Comparator.comparingInt(staff ->
-                    Optional.ofNullable(staff.getStaffDutySort()).orElse(0)
-            ));
-
-            // 查询10L类型人员
-            RosterStaff staffType10 = new RosterStaff();
-            staffType10.setStaffTypeId(10L);
-            staffType10.setStatus("0");
-            List<RosterStaff> staffList10 = rosterStaffService.selectRosterStaffList(staffType10);
-            // 按 staffDutySort 从小到大排序
-            staffList10.sort(Comparator.comparingInt(staff ->
-                    Optional.ofNullable(staff.getStaffDutySort()).orElse(0)
-            ));
-
-            // 为13L人员创建两个排序：原排序和新排序（最后两个放到最前面）
-            List<RosterStaff> staffList13Original = new ArrayList<>(staffList13);
-            List<RosterStaff> staffList13New = createNewSortFor13L(staffList13);
-
             // 初始化索引
             int index5 = 0; // 5L人员索引
             int index6 = 0; // 6L人员索引
@@ -1265,9 +1268,37 @@ public class RosterScheduleDetailController extends BaseController
             int index13Original = 0; // 13L原排序索引
             int index13New = 0; // 13L新排序索引
 
-            // 获取上个月最后的值班索引
+            // 获取上个月最后的值班索引（用于索引连续性）
+            // 注意：我们这里需要一些临时的员工列表来查询上个月的记录
+            RosterStaff tempStaffType5 = new RosterStaff();
+            tempStaffType5.setStaffTypeId(5L);
+            tempStaffType5.setStatus("0");
+            List<RosterStaff> tempStaffList5 = rosterStaffService.selectRosterStaffList2(tempStaffType5);
+            
+            RosterStaff tempStaffType6 = new RosterStaff();
+            tempStaffType6.setStaffTypeId(6L);
+            tempStaffType6.setStatus("0");
+            List<RosterStaff> tempStaffList6 = rosterStaffService.selectRosterStaffList2(tempStaffType6);
+            
+            RosterStaff tempStaffType8 = new RosterStaff();
+            tempStaffType8.setStaffTypeId(8L);
+            tempStaffType8.setStatus("0");
+            List<RosterStaff> tempStaffList8 = rosterStaffService.selectRosterStaffList2(tempStaffType8);
+            
+            RosterStaff tempStaffType10 = new RosterStaff();
+            tempStaffType10.setStaffTypeId(10L);
+            tempStaffType10.setStatus("0");
+            List<RosterStaff> tempStaffList10 = rosterStaffService.selectRosterStaffList2(tempStaffType10);
+            
+            RosterStaff tempStaffType13 = new RosterStaff();
+            tempStaffType13.setStaffTypeId(13L);
+            tempStaffType13.setStatus("0");
+            List<RosterStaff> tempStaffList13 = rosterStaffService.selectRosterStaffList2(tempStaffType13);
+            List<RosterStaff> tempStaffList13Original = new ArrayList<>(tempStaffList13);
+            List<RosterStaff> tempStaffList13New = createNewSortFor13L(tempStaffList13);
+            
             Map<String, Integer> lastMonthIndices = getLastMonthDutyIndices(firstDayOfMonth,
-                    staffList5, staffList6, staffList8, staffList10, staffList13Original, staffList13New);
+                    tempStaffList5, tempStaffList6, tempStaffList8, tempStaffList10, tempStaffList13Original, tempStaffList13New);
             if (lastMonthIndices != null) {
                 index5 = lastMonthIndices.getOrDefault("index5", 0);
                 index6 = lastMonthIndices.getOrDefault("index6", 0);
@@ -1276,7 +1307,6 @@ public class RosterScheduleDetailController extends BaseController
                 index13Original = lastMonthIndices.getOrDefault("index13Original", 0);
                 index13New = lastMonthIndices.getOrDefault("index13New", 0);
                 
-                // 添加调试日志，查看获取到的索引值
                 logger.info("从上个月获取到的索引值: index5={}, index6={}, index8={}, index10={}, index13Original={}, index13New={}",
                         index5, index6, index8, index10, index13Original, index13New);
             } else {
@@ -1301,96 +1331,159 @@ public class RosterScheduleDetailController extends BaseController
                 Date currentDate = cal.getTime();
                 try {
                     // 1. 月度值班安排操作
+                    // 截断当前日期时间部分以进行正确的日期比较
+                    LocalDateTime localDateTime = LocalDateTime.ofInstant(currentDate.toInstant(), ZoneId.systemDefault());
+                    LocalDateTime truncatedDateTime = localDateTime.truncatedTo(ChronoUnit.DAYS);
+                    Date truncatedCurrentDate = Date.from(truncatedDateTime.atZone(ZoneId.systemDefault()).toInstant());
+                    
+                    // 【关键改动】每天都重新查询当前日期可用的员工（包括休假的，但轮转时会跳过）
+                    // 查询6L类型员工（完整列表，不过滤）
+                    RosterStaff dailyStaffType6 = new RosterStaff();
+                    dailyStaffType6.setStaffTypeId(6L);
+                    dailyStaffType6.setStatus("0");
+                    List<RosterStaff> dailyStaffList6 = rosterStaffService.selectRosterStaffList2(dailyStaffType6);
+                    // 不删除休假人员，在轮转时动态检查
+                    
+                    // 查询5L类型员工（完整列表，不过滤）
+                    RosterStaff dailyStaffType5 = new RosterStaff();
+                    dailyStaffType5.setStaffTypeId(5L);
+                    dailyStaffType5.setStatus("0");
+                    List<RosterStaff> dailyStaffList5 = rosterStaffService.selectRosterStaffList2(dailyStaffType5);
+                    // 不删除休假人员，在轮转时动态检查
+                    
+                    // 查询8L类型员工（完整列表，不过滤）
+                    
+                    RosterStaff dailyStaffType8 = new RosterStaff();
+                    dailyStaffType8.setStaffTypeId(8L);
+                    dailyStaffType8.setStatus("0");
+                    List<RosterStaff> dailyStaffList8 = rosterStaffService.selectRosterStaffList2(dailyStaffType8);
+                    // 不删除休假人员
+                    
+                    // 查询10L类型员工（完整列表，不过滤）
+                    
+                    RosterStaff dailyStaffType10 = new RosterStaff();
+                    dailyStaffType10.setStaffTypeId(10L);
+                    dailyStaffType10.setStatus("0");
+                    List<RosterStaff> dailyStaffList10 = rosterStaffService.selectRosterStaffList2(dailyStaffType10);
+                    // 不删除休假人员
+                    
+                    // 查询13L原排序员工（完整列表，不过滤）
+                    RosterStaff dailyStaffType13Original = new RosterStaff();
+                    dailyStaffType13Original.setStaffTypeId(13L);
+                    dailyStaffType13Original.setStatus("0");
+                    List<RosterStaff> dailyStaffList13Original = rosterStaffService.selectRosterStaffList2(dailyStaffType13Original);
+                    // 不删除休假人员
+                    
+                    // 查询13L新排序员工（最后两个放前面）
+                    List<RosterStaff> dailyStaffList13New = createNewSortFor13L(dailyStaffList13Original);
+                    
                     // 安排6L人员值班
-                    RosterStaff current6LStaff = staffList6.get(index6 % staffList6.size());
-                    createDutyRecord(current6LStaff.getId(), currentDate);
-                    dutyCount++;
-                    logger.info("日期 {}: 安排6L人员 {} 值班",
-                            sdf.format(currentDate), current6LStaff.getStaffName());
-
-                    // 安排5L人员值班
-                    RosterStaff current5LStaff = staffList5.get(index5 % staffList5.size());
-                    createDutyRecord(current5LStaff.getId(), currentDate);
-                    dutyCount++;
-                    logger.info("日期 {}: 安排5L人员 {} 值班",
-                            sdf.format(currentDate), current5LStaff.getStaffName());
-
-                    // 安排13L人员值班（两个人：一个从原排序，一个从新排序）
-                    if (!staffList13Original.isEmpty()) {
-                        RosterStaff current13LStaffOriginal = staffList13Original.get(index13Original % staffList13Original.size());
-                        createDutyRecord(current13LStaffOriginal.getId(), currentDate);
-                        dutyCount++;
-                        logger.info("日期 {}: 安排13L人员(原排序) {} 值班",
-                                sdf.format(currentDate), current13LStaffOriginal.getStaffName());
+                    if (!dailyStaffList6.isEmpty()) {
+                        // 【诊断日志】输出当前6L名单
+                        String staffNames6 = dailyStaffList6.stream()
+                                .map(RosterStaff::getStaffName)
+                                .collect(Collectors.joining(", "));
+                        logger.warn("【诊断】日期 {}: 6L人员(一线医生)总数={}, 名单=[{}], 当前index6={}",
+                                sdf.format(truncatedCurrentDate), dailyStaffList6.size(), staffNames6, index6);
+                        
+                        RosterStaff current6LStaff = findAvailableStaffForScheduling(dailyStaffList6, index6, truncatedCurrentDate);
+                        if (current6LStaff != null) {
+                            createDutyRecord(current6LStaff.getId(), truncatedCurrentDate);
+                            dutyCount++;
+                            // 根据实际找到的员工位置来更新索引
+                            for (int i = 0; i < dailyStaffList6.size(); i++) {
+                                if (dailyStaffList6.get(i).getId().equals(current6LStaff.getId())) {
+                                    index6 = (i + 1) % dailyStaffList6.size();
+                                    logger.warn("【修复】日期 {}: 找刻到成或的一线医生 {} (位置={}), 下个index6为 {}",
+                                            sdf.format(truncatedCurrentDate), current6LStaff.getStaffName(), i, index6);
+                                    break;
+                                }
+                            }
+                            logger.info("日期 {}: 安排6L人员(一线医生) {} 值班 (index6={})",
+                                    sdf.format(truncatedCurrentDate), current6LStaff.getStaffName(), index6);
+                        }
                     }
 
-                    if (!staffList13New.isEmpty()) {
-                        RosterStaff current13LStaffNew = staffList13New.get(index13New % staffList13New.size());
-                        createDutyRecord(current13LStaffNew.getId(), currentDate);
-                        dutyCount++;
-                        logger.info("日期 {}: 安排13L人员(新排序) {} 值班",
-                                sdf.format(currentDate), current13LStaffNew.getStaffName());
+                    // 安排5L人员值班
+                    if (!dailyStaffList5.isEmpty()) {
+                        RosterStaff current5LStaff = findAvailableStaffForScheduling(dailyStaffList5, index5, truncatedCurrentDate);
+                        if (current5LStaff != null) {
+                            createDutyRecord(current5LStaff.getId(), truncatedCurrentDate);
+                            dutyCount++;
+                            // 根据实际找到的员工位置来更新索引（每两天前进一次）
+                            if (dayCount % 2 == 1) {
+                                for (int i = 0; i < dailyStaffList5.size(); i++) {
+                                    if (dailyStaffList5.get(i).getId().equals(current5LStaff.getId())) {
+                                        index5 = (i + 1) % dailyStaffList5.size();
+                                        logger.warn("【修复】日期 {}: 找刻到成或的二线医生 {} (位置={}), 下个index5为 {}",
+                                                sdf.format(truncatedCurrentDate), current5LStaff.getStaffName(), i, index5);
+                                        break;
+                                    }
+                                }
+                            }
+                            logger.info("日期 {}: 安排5L人员 {} 值班",
+                                    sdf.format(truncatedCurrentDate), current5LStaff.getStaffName());
+                        }
+                    }
+
+                    // 安排13L人员值班（原排序）
+                    if (!dailyStaffList13Original.isEmpty()) {
+                        RosterStaff current13LStaffOriginal = findAvailableStaffForScheduling(dailyStaffList13Original, index13Original, truncatedCurrentDate);
+                        if (current13LStaffOriginal != null) {
+                            createDutyRecord(current13LStaffOriginal.getId(), truncatedCurrentDate);
+                            dutyCount++;
+                            logger.info("日期 {}: 安排13L人员(原排序) {} 值班",
+                                    sdf.format(truncatedCurrentDate), current13LStaffOriginal.getStaffName());
+                        }
+                    }
+
+                    // 安排13L人员值班（新排序）
+                    if (!dailyStaffList13New.isEmpty()) {
+                        RosterStaff current13LStaffNew = findAvailableStaffForScheduling(dailyStaffList13New, index13New, truncatedCurrentDate);
+                        if (current13LStaffNew != null) {
+                            createDutyRecord(current13LStaffNew.getId(), truncatedCurrentDate);
+                            dutyCount++;
+                            logger.info("日期 {}: 安排13L人员(新排序) {} 值班",
+                                    sdf.format(truncatedCurrentDate), current13LStaffNew.getStaffName());
+                        }
                     }
 
                     // 安排8L人员值班
-                    if (!staffList8.isEmpty()) {
-                        RosterStaff current8LStaff = staffList8.get(index8 % staffList8.size());
-                        createDutyRecord(current8LStaff.getId(), currentDate);
-                        dutyCount++;
-                        logger.info("日期 {}: 安排8L人员 {} 值班",
-                                sdf.format(currentDate), current8LStaff.getStaffName());
+                    if (!dailyStaffList8.isEmpty()) {
+                        RosterStaff current8LStaff = findAvailableStaffForScheduling(dailyStaffList8, index8, truncatedCurrentDate);
+                        if (current8LStaff != null) {
+                            createDutyRecord(current8LStaff.getId(), truncatedCurrentDate);
+                            dutyCount++;
+                            logger.info("日期 {}: 安排8L人员 {} 值班",
+                                    sdf.format(truncatedCurrentDate), current8LStaff.getStaffName());
+                        }
                     }
 
                     // 安排10L人员值班
-                    if (!staffList10.isEmpty()) {
-                        RosterStaff current10LStaff = staffList10.get(index10 % staffList10.size());
-                        createDutyRecord(current10LStaff.getId(), currentDate);
-                        dutyCount++;
-                        logger.info("日期 {}: 安排10L人员 {} 值班",
-                                sdf.format(currentDate), current10LStaff.getStaffName());
+                    if (!dailyStaffList10.isEmpty()) {
+                        RosterStaff current10LStaff = findAvailableStaffForScheduling(dailyStaffList10, index10, truncatedCurrentDate);
+                        if (current10LStaff != null) {
+                            createDutyRecord(current10LStaff.getId(), truncatedCurrentDate);
+                            dutyCount++;
+                            logger.info("日期 {}: 安排10L人员 {} 值班",
+                                    sdf.format(truncatedCurrentDate), current10LStaff.getStaffName());
+                        }
                     }
 
                     // 2. 智能排班操作
-                    boolean success = intelligentScheduleForDay(currentDate);
+                    boolean success = intelligentScheduleForDay(truncatedCurrentDate);
                     if (success) {
                         scheduledDays++;
                     }
 
-                    // 标记6L人员明天要下夜
-                    markNightShiftForTomorrow(current6LStaff.getId(), currentDate);
-                    nightShiftStaffMap.put(currentDate, current6LStaff.getId());
-
-                    //标记13L人员夜班明天要下夜
-                    if (!staffList13New.isEmpty()) {
-                        RosterStaff current13LStaffNew = staffList13New.get(index13New % staffList13New.size());
-                        markNightShiftForTomorrow(current13LStaffNew.getId(), currentDate);
-                        nightShiftStaffMap.put(currentDate, current13LStaffNew.getId());
-                    }
-
-                    // 标记8L人员明天要下夜
-                    if (!staffList8.isEmpty()) {
-                        RosterStaff current8LStaff = staffList8.get(index8 % staffList8.size());
-                        markNightShiftForTomorrow(current8LStaff.getId(), currentDate);
-                        nightShiftStaffMap.put(currentDate, current8LStaff.getId());
-                    }
-
-                    // 标记10L人员明天要下夜
-                    if (!staffList10.isEmpty()) {
-                        RosterStaff current10LStaff = staffList10.get(index10 % staffList10.size());
-                        markNightShiftForTomorrow(current10LStaff.getId(), currentDate);
-                        nightShiftStaffMap.put(currentDate, current10LStaff.getId());
-                    }
-                    // 索引前进
-                    index6++;
+                    // 索引前进（不再削除index6++，已经在选择员工后更新了）
+                    // index6++; // 删除！已经根据实际扮配的员工来更新了
                     index8++;
                     index10++;
                     index13Original++;
                     index13New++;
 
-                    // 每两天前进一次5L索引
-                    if (dayCount % 2 == 1) {
-                        index5++;
-                    }
+                    
 
                 } catch (Exception e) {
                     logger.error("处理日期 {} 时出错", sdf.format(currentDate), e);
@@ -1461,41 +1554,70 @@ public class RosterScheduleDetailController extends BaseController
             // 查询各类型员工（排除请假人员）
             RosterStaff staffType5 = new RosterStaff();
             staffType5.setStaffTypeId(5L);
-            List<RosterStaff> staffList5 = rosterStaffService.selectRosterStaffList(staffType5);
+            staffType5.setStatus("0");
+            List<RosterStaff> staffList5 = rosterStaffService.selectRosterStaffList2(staffType5);
+            // 削除休假人员
+            staffList5 = staffList5.stream()
+                    .filter(staff -> !isStaffOnLeaveForDetail(staff, truncatedDate))
+                    .collect(Collectors.toList());
 
             RosterStaff staffType6 = new RosterStaff();
             staffType6.setStaffTypeId(6L);
-            List<RosterStaff> staffList6 = rosterStaffService.selectRosterStaffList(staffType6);
+            staffType6.setStatus("0");
+            List<RosterStaff> staffList6 = rosterStaffService.selectRosterStaffList2(staffType6);
+            // 削除休假人员
+            staffList6 = staffList6.stream()
+                    .filter(staff -> !isStaffOnLeaveForDetail(staff, truncatedDate))
+                    .collect(Collectors.toList());
 
             // 新增14L类型人员查询
             RosterStaff staffType14 = new RosterStaff();
             staffType14.setStaffTypeId(14L);
-            List<RosterStaff> staffList14 = rosterStaffService.selectRosterStaffList(staffType14);
+            staffType14.setStatus("0");
+            List<RosterStaff> staffList14 = rosterStaffService.selectRosterStaffList2(staffType14);
+            // 削除休假人员
+            staffList14 = staffList14.stream()
+                    .filter(staff -> !isStaffOnLeaveForDetail(staff, truncatedDate))
+                    .collect(Collectors.toList());
 
             RosterStaff staffType7 = new RosterStaff();
             staffType7.setStaffTypeId(7L);
-            staffType7.setStaffLeaveEndTime(null);
             staffType7.setStatus("0");
             List<RosterStaff> staffList7 = rosterStaffService.selectRosterStaffList2(staffType7);
+            // 削除休假人员
+            staffList7 = staffList7.stream()
+                    .filter(staff -> !isStaffOnLeaveForDetail(staff, truncatedDate))
+                    .collect(Collectors.toList());
 
             // 查询8L、10L类型人员并合并
             RosterStaff staffType8 = new RosterStaff();
             staffType8.setStaffTypeId(8L);
-            staffType8.setStaffLeaveEndTime(null);
             staffType8.setStatus("0");
             List<RosterStaff> staffList8 = rosterStaffService.selectRosterStaffList2(staffType8);
+            // 削除休假人员
+            staffList8 = staffList8.stream()
+                    .filter(staff -> !isStaffOnLeaveForDetail(staff, truncatedDate))
+                    .collect(Collectors.toList());
 
+            // 查询10L类型人员
             RosterStaff staffType10 = new RosterStaff();
             staffType10.setStaffTypeId(10L);
-            staffType10.setStaffLeaveEndTime(null);
             staffType10.setStatus("0");
             List<RosterStaff> staffList10 = rosterStaffService.selectRosterStaffList2(staffType10);
-
+            // 削除休假人员
+            staffList10 = staffList10.stream()
+                    .filter(staff -> !isStaffOnLeaveForDetail(staff, truncatedDate))
+                    .collect(Collectors.toList());
+                        
+            // 查询13L类型人员
             RosterStaff staffType13 = new RosterStaff();
             staffType13.setStaffTypeId(13L);
-            staffType13.setStaffLeaveEndTime(null);
             staffType13.setStatus("0");
             List<RosterStaff> staffList13 = rosterStaffService.selectRosterStaffList2(staffType13);
+            // 削除休假人员
+            staffList13 = staffList13.stream()
+                    .filter(staff -> !isStaffOnLeaveForDetail(staff, truncatedDate))
+                    .collect(Collectors.toList());
 
             // 合并8L、10L人员
             List<RosterStaff> secondaryStaffList = new ArrayList<>();
@@ -1511,11 +1633,17 @@ public class RosterScheduleDetailController extends BaseController
             Collections.shuffle(randomSecondaryIndices);
             int secondaryIndexCounter = 0; // 随机索引计数器
 
-            // 合并5L、6L和14L人员并按staffSort排序
+            // 合并5L、6L堔5L14L人员并按staffSort排序
             List<RosterStaff> mainStaffList = new ArrayList<>();
             mainStaffList.addAll(staffList5);
             mainStaffList.addAll(staffList6);
             mainStaffList.addAll(staffList14);
+                        
+            // 过滤掉当前日期处于休假期间的主班人员
+            mainStaffList = mainStaffList.stream()
+                    .filter(staff -> !isStaffOnLeaveForDetail(staff, truncatedDate))
+                    .collect(Collectors.toList());
+                        
             // 按staffSort从小到大排序
             mainStaffList.sort(Comparator.comparingInt(staff ->
                     Optional.ofNullable(staff.getStaffSort()).orElse(0)
@@ -1558,7 +1686,7 @@ public class RosterScheduleDetailController extends BaseController
             for (int j = 0; j < roomCount; j++) {
                 // 创建排班记录
                 RosterScheduleDetail scheduleDetail = new RosterScheduleDetail();
-                scheduleDetail.setDate(date);
+                scheduleDetail.setDate(truncatedDate);  // 修复：使用截断后的日期
                 if (roomList.get(j).getStatus().equals("0")) {
                     scheduleDetail.setRoomId(roomList.get(j).getId());
 
@@ -1568,7 +1696,7 @@ public class RosterScheduleDetailController extends BaseController
 
                     // 处理主班人员：每个房间对应固定的主班人员（按排序顺序）
                     if (j < mainStaffList.size()) {
-                        if (mainStaffList.get(j).getStatus().equals("0") && mainStaffList.get(j).getStaffLeave() == null) {
+                        if (mainStaffList.get(j).getStatus().equals("0") && mainStaffList.get(j).getStaffLeave() == null && !isStaffOnLeaveForDetail(mainStaffList.get(j), truncatedDate)) {
                             // 分配对应房间序号的主班人员
                             RosterStaff mainStaff = mainStaffList.get(j);
                             RosterStaffRelation mainStaffRelation = new RosterStaffRelation();
@@ -1884,6 +2012,42 @@ public class RosterScheduleDetailController extends BaseController
 
 
     /**
+     * 从指定的索引位置开始，找下一个不在休假的员工
+     * @param staffList 员工列表
+     * @param startIndex 开始索引
+     * @param checkDate 检查日期
+     * @return 不在休假的员工，或null
+     */
+    private RosterStaff findAvailableStaffForScheduling(List<RosterStaff> staffList, int startIndex, Date checkDate) {
+        if (staffList == null || staffList.isEmpty()) {
+            return null;
+        }
+        
+        int normalizedIndex = startIndex % staffList.size();
+        int attempts = 0;
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        
+        while (attempts < staffList.size()) {
+            RosterStaff staff = staffList.get(normalizedIndex);
+            
+            // 检查该员工是否有效且不在休假
+            if (staff.getStatus() != null && staff.getStatus().equals("0") && 
+                !isStaffOnLeaveForDetail(staff, checkDate)) {
+                logger.info("当前日期 {} 找到可用员工: {}", sdf.format(checkDate), staff.getStaffName());
+                return staff;
+            } else {
+                logger.debug("日期 {} 员工 {} 不可用（或程序中休假）", sdf.format(checkDate), staff.getStaffName());
+            }
+            
+            normalizedIndex = (normalizedIndex + 1) % staffList.size();
+            attempts++;
+        }
+        
+        logger.warn("日期 {} 不能找到不在休假的可用员工", sdf.format(checkDate));
+        return null;
+    }
+
+    /**
      * 创建值班记录
      */
     private void createDutyRecord(Long staffId, Date dutyTime) {
@@ -1892,6 +2056,22 @@ public class RosterScheduleDetailController extends BaseController
             LocalDateTime localDateTime = LocalDateTime.ofInstant(dutyTime.toInstant(), ZoneId.systemDefault());
             LocalDateTime truncatedDateTime = localDateTime.truncatedTo(ChronoUnit.DAYS);
             Date truncatedDutyTime = Date.from(truncatedDateTime.atZone(ZoneId.systemDefault()).toInstant());
+            
+            // 检查员工是否在休假期间
+            RosterStaff staff = rosterStaffService.selectRosterStaffById(staffId);
+            
+            // 【诊断日志】
+            if (staff != null) {
+                logger.warn("【诊断】员工 {} (ID:{}): staffLeave={}, startTime={}, endTime={}",
+                        staff.getStaffName(), staffId, staff.getStaffLeave(),
+                        staff.getStaffLeaveStartTime(), staff.getStaffLeaveEndTime());
+            }
+            
+            if (staff != null && isStaffOnLeaveForDetail(staff, truncatedDutyTime)) {
+                logger.info("员工 {} 在日期 {} 处于休假期间，不安排值班",
+                        staff.getStaffName(), new SimpleDateFormat("yyyy-MM-dd").format(truncatedDutyTime));
+                return;
+            }
             
             // 检查是否已存在该人员该天的值班记录
             RosterDuty checkQuery = new RosterDuty();
@@ -2022,8 +2202,11 @@ public class RosterScheduleDetailController extends BaseController
                         // 第一个6L人员
                         for (int i = 0; i < staffList6.size(); i++) {
                             if (staffList6.get(i).getId().equals(staff.getId())) {
-                                indices.put("index6", (i + 1) % staffList6.size());
-                                logger.info("    设置 index6 = {}", (i + 1) % staffList6.size());
+                                // 【修复】直接使用该员工的位置，下个月从他的下一个开始
+                                int nextIndex = (i + 1) % staffList6.size();
+                                indices.put("index6", nextIndex);
+                                logger.warn("【诊断】上个月最后一天的6L值班人员: {} (index={}), 下个月从第 {} 个开始",
+                                        staff.getStaffName(), i, nextIndex);
                                 count6L++;
                                 break;
                             }
@@ -2032,8 +2215,10 @@ public class RosterScheduleDetailController extends BaseController
                         // 第一个5L人员
                         for (int i = 0; i < staffList5.size(); i++) {
                             if (staffList5.get(i).getId().equals(staff.getId())) {
-                                indices.put("index5", (i + 1) % staffList5.size());
-                                logger.info("    设置 index5 = {}", (i + 1) % staffList5.size());
+                                int nextIndex = (i + 1) % staffList5.size();
+                                indices.put("index5", nextIndex);
+                                logger.warn("【诊断】上个月最后一天的5L值班人员: {} (index={}), 下个月从第 {} 个开始",
+                                        staff.getStaffName(), i, nextIndex);
                                 count5L++;
                                 break;
                             }
@@ -2044,8 +2229,10 @@ public class RosterScheduleDetailController extends BaseController
                         if (count13LOriginal == 0) {
                             for (int i = 0; i < staffList13Original.size(); i++) {
                                 if (staffList13Original.get(i).getId().equals(staff.getId())) {
-                                    indices.put("index13Original", (i + 1) % staffList13Original.size());
-                                    logger.info("    设置 index13Original = {}", (i + 1) % staffList13Original.size());
+                                    int nextIndex = (i + 1) % staffList13Original.size();
+                                    indices.put("index13Original", nextIndex);
+                                    logger.warn("【诊断】上个月最后一天癈13L(原排序)值班人员: {} (index={}), 下个月从第 {} 个开始",
+                                            staff.getStaffName(), i, nextIndex);
                                     count13LOriginal++;
                                     foundInOriginal = true;
                                     break;
@@ -2056,8 +2243,10 @@ public class RosterScheduleDetailController extends BaseController
                         if (!foundInOriginal && count13LNew == 0) {
                             for (int i = 0; i < staffList13New.size(); i++) {
                                 if (staffList13New.get(i).getId().equals(staff.getId())) {
-                                    indices.put("index13New", (i + 1) % staffList13New.size());
-                                    logger.info("    设置 index13New = {}", (i + 1) % staffList13New.size());
+                                    int nextIndex = (i + 1) % staffList13New.size();
+                                    indices.put("index13New", nextIndex);
+                                    logger.warn("【诊断】上个月最后一天癈13L(新排序)值班人员: {} (index={}), 下个月从第 {} 个开始",
+                                            staff.getStaffName(), i, nextIndex);
                                     count13LNew++;
                                     break;
                                 }
@@ -2067,8 +2256,10 @@ public class RosterScheduleDetailController extends BaseController
                         // 第一个8L人员
                         for (int i = 0; i < staffList8.size(); i++) {
                             if (staffList8.get(i).getId().equals(staff.getId())) {
-                                indices.put("index8", (i + 1) % staffList8.size());
-                                logger.info("    设置 index8 = {}", (i + 1) % staffList8.size());
+                                int nextIndex = (i + 1) % staffList8.size();
+                                indices.put("index8", nextIndex);
+                                logger.warn("【诊断】上个月最后一天的8L值班人员: {} (index={}), 下个月从第 {} 个开始",
+                                        staff.getStaffName(), i, nextIndex);
                                 count8L++;
                                 break;
                             }
@@ -2077,8 +2268,10 @@ public class RosterScheduleDetailController extends BaseController
                         // 第一个10L人员
                         for (int i = 0; i < staffList10.size(); i++) {
                             if (staffList10.get(i).getId().equals(staff.getId())) {
-                                indices.put("index10", (i + 1) % staffList10.size());
-                                logger.info("    设置 index10 = {}", (i + 1) % staffList10.size());
+                                int nextIndex = (i + 1) % staffList10.size();
+                                indices.put("index10", nextIndex);
+                                logger.warn("【诊断】上个月最后一天的9L值班人员: {} (index={}), 下个月从第 {} 个开始",
+                                        staff.getStaffName(), i, nextIndex);
                                 count10L++;
                                 break;
                             }
@@ -2094,6 +2287,64 @@ public class RosterScheduleDetailController extends BaseController
         } catch (Exception e) {
             logger.error("获取上个月值班索引失败", e);
             return null;
+        }
+    }
+
+    /**
+     * 判断员工在指定日期是否在休假期间
+     */
+    private boolean isStaffOnLeaveForDetail(RosterStaff staff, Date checkDate) {
+        if (staff == null || checkDate == null) {
+            return false;
+        }
+
+        String staffLeaveStartTime = staff.getStaffLeaveStartTime();
+        String staffLeaveEndTime = staff.getStaffLeaveEndTime();
+
+        // 如果没有设置休假时间，则不在休假
+        if (staffLeaveStartTime == null || staffLeaveStartTime.trim().isEmpty() ||
+            staffLeaveEndTime == null || staffLeaveEndTime.trim().isEmpty()) {
+            logger.debug("员工 {} 沒有设置休假时间（开始: {}, 结束: {}）",
+                    staff.getStaffName(), staffLeaveStartTime, staffLeaveEndTime);
+            return false;
+        }
+
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            String checkDateStr = sdf.format(checkDate);
+
+            // 提取开始时间的日期部分
+            String startDateStr = staffLeaveStartTime.trim();
+            if (startDateStr.length() >= 10) {
+                startDateStr = startDateStr.substring(0, 10);
+            }
+
+            // 提取结束时间的日期部分
+            String endDateStr = staffLeaveEndTime.trim();
+            if (endDateStr.length() >= 10) {
+                endDateStr = endDateStr.substring(0, 10);
+            }
+
+            // 比较日期（字符串比较，格式yyyy-MM-dd）
+            int compareStart = checkDateStr.compareTo(startDateStr);
+            int compareEnd = checkDateStr.compareTo(endDateStr);
+            
+            logger.info("一定要输出详细信息，方便调试");
+            logger.info("员工休假检查: {} | 检查日期: {} | 休假区间: {} ~ {} | 比较结果: compareStart={}, compareEnd={}",
+                    staff.getStaffName(), checkDateStr, startDateStr, endDateStr, compareStart, compareEnd);
+            
+            boolean isOnLeave = compareStart >= 0 && compareEnd <= 0;
+            
+            if (isOnLeave) {
+                logger.warn("*** 【】 {} 在日期 {} 处于休假期间（{}~{}）***",
+                        staff.getStaffName(), checkDateStr, startDateStr, endDateStr);
+            }
+            
+            return isOnLeave;
+        } catch (Exception e) {
+            logger.error("判断休假时间失败 - 员工: {}, 开始时间: {}, 结束时间: {}",
+                    staff.getStaffName(), staffLeaveStartTime, staffLeaveEndTime, e);
+            return false;
         }
     }
 

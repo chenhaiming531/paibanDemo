@@ -44,6 +44,9 @@ public class RosterStaff extends BaseEntity
     @Excel(name = "标签失效时间")
     private String staffLeaveEndTime;
 
+    @Excel(name = "休假开始时间")
+    private String staffLeaveStartTime;
+
     /** 性别（0女 1男） */
     @Excel(name = "性别", readConverterExp = "0=女,1=男")
     private String staffGender;
@@ -100,6 +103,14 @@ public class RosterStaff extends BaseEntity
 
     public void setStaffLeaveEndTime(String staffLeaveEndTime) {
         this.staffLeaveEndTime = staffLeaveEndTime;
+    }
+
+    public String getStaffLeaveStartTime() {
+        return staffLeaveStartTime;
+    }
+
+    public void setStaffLeaveStartTime(String staffLeaveStartTime) {
+        this.staffLeaveStartTime = staffLeaveStartTime;
     }
 
     public String getStaffLeave() {
@@ -240,6 +251,7 @@ public class RosterStaff extends BaseEntity
                 .append("staffPriority", getStaffPriority())
                 .append("staffDutySort", getStaffDutySort())
                 .append("staffLeaveEndTime", getStaffLeaveEndTime())
+                .append("staffLeaveStartTime", getStaffLeaveStartTime())
                 .append("staffGender", getStaffGender())
                 .append("department", getDepartment())
                 .append("unit", getUnit())
