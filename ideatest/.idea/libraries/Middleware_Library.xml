@@ -1,0 +1,21 @@
+<component name="libraryTable">
+  <library name="Middleware_Library">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../../DevHome/testhome20260107/testhome/middleware/comp.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../DevHome/testhome20260107/testhome/middleware/core.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../DevHome/testhome20260107/testhome/middleware/ecj-4.18.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../DevHome/testhome20260107/testhome/middleware/fwejb.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../DevHome/testhome20260107/testhome/middleware/j2ee.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../DevHome/testhome20260107/testhome/middleware/javaee.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../DevHome/testhome20260107/testhome/middleware/jdmkrt.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../DevHome/testhome20260107/testhome/middleware/jstl.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../DevHome/testhome20260107/testhome/middleware/mw.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../DevHome/testhome20260107/testhome/middleware/nt.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../DevHome/testhome20260107/testhome/middleware/standard.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../DevHome/testhome20260107/testhome/middleware/starter.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../DevHome/testhome20260107/testhome/middleware/tcsrc.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

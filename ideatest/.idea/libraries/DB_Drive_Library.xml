@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="DB_Drive_Library">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../../DevHome/testhome20260107/testhome/driver/oracle_19c/ojdbc6.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
