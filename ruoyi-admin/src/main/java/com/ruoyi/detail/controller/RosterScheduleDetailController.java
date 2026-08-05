@@ -552,7 +552,7 @@ public class RosterScheduleDetailController extends BaseController
             LocalDateTime truncatedFirstDateTime = firstDateTime.truncatedTo(ChronoUnit.DAYS);
             Date firstDayOfMonth = Date.from(truncatedFirstDateTime.atZone(ZoneId.systemDefault()).toInstant());
 
-            cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH));
+            cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH));        
             LocalDateTime lastDateTime = LocalDateTime.ofInstant(cal.getTime().toInstant(), ZoneId.systemDefault());
             LocalDateTime truncatedLastDateTime = lastDateTime.truncatedTo(ChronoUnit.DAYS);
             // 将最后一天的时间设置为23:59:59以包含整个月份的最后一天
